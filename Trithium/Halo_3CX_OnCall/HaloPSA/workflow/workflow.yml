@@ -1,0 +1,37 @@
+# GitHub Actions Workflow: Update On-Call Technician
+# This workflow runs a PowerShell script to update on-call technician assignments.
+# It runs every Monday at 12:00 UTC (8:00 AM EDT) and can also be triggered manually.
+
+name: Update On-Call Technician
+
+on:
+  schedule:
+    #- cron: '0 12 * * 1'  # Runs every Monday at 12:00 UTC
+  workflow_dispatch:      # Allows manual trigger via GitHub UI
+
+jobs:
+  update-oncall:
+    runs-on: windows-latest  # Use the latest Windows runner environment
+
+    # Define environment variables using GitHub secrets (replace with your own secret names)
+    env:
+      API_CLIENT_ID: ${{ secrets.API_CLIENT_ID }}             # Your API client ID (stored in GitHub secrets)
+      API_CLIENT_SECRET: ${{ secrets.API_CLIENT_SECRET }}     # Your API client secret
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}               # Base URL for the API you're using
+      ROLE_ID: ${{ secrets.ROLE_ID }}                         # Role ID to update (e.g., for on-call tech)
+      TECH_USER_1: ${{ secrets.TECH_USER_1 }}                 # User identifier for technician 1
+      TECH_USER_2: ${{ secrets.TECH_USER_2 }}                 # User identifier for technician 2
+      TECH_USER_3: ${{ secrets.TECH_USER_3 }}                 # User identifier for technician 3
+      TECH_ID_1: ${{ secrets.TECH_ID_1 }}                     # Unique ID for technician 1
+      TECH_ID_2: ${{ secrets.TECH_ID_2 }}                     # Unique ID for technician 2
+      TECH_ID_3: ${{ secrets.TECH_ID_3 }}                     # Unique ID for technician 3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # Checks out the repository content so the script can be accessed
+
+      - name: Run PowerShell script
+        run: ./onCallUpdate.ps1
+        shell: pwsh
+        # Executes your PowerShell script located in the root directory
