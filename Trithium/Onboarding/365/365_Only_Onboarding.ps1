@@ -1,126 +1,154 @@
-# Import required Microsoft Graph modules
+# Import required Microsoft Graph PowerShell modules
 Import-Module Microsoft.Graph.Users
 Import-Module Microsoft.Graph.Groups
 Import-Module Microsoft.Graph.Authentication
 
-# Connect to Microsoft Graph with required permissions
+# Connect to Microsoft Graph with necessary permissions
 Write-Host "Connecting to Microsoft Graph..."
 Connect-MgGraph -Scopes "User.ReadWrite.All", "Group.ReadWrite.All", "Directory.ReadWrite.All"
 
-# Display context information for verification
+# Retrieve the current Microsoft Graph context (tenant info)
 $context = Get-MgContext
-Write-Host "`nConnected to Microsoft Graph.`n"
-Write-Host "Connected Directory:"
+Write-Host "Connected to Microsoft Graph."
 Write-Host "Tenant Display Name : $($context.TenantDisplayName)"
 Write-Host "Tenant ID           : $($context.TenantId)"
 Write-Host "Account             : $($context.Account)"
 
-# Define group display name (replace with actual group name)
-$groupName = "REPLACE_WITH_GROUP_NAME"
+# Define the name of the group to ensure it exists
+$groupName = "MMC F1 licensing"
 
-# Check if the group already exists
+# Check if the group already exists in Azure AD
 $group = Get-MgGroup -Filter "displayName eq '$groupName'" -ErrorAction SilentlyContinue
 
-# Create the group if it doesn't exist
+# If the group doesn't exist, create it
 if (-not $group) {
-    Write-Host "`nGroup '$groupName' not found. Creating it..."
+    Write-Host "Group '$groupName' not found. Creating it..."
     $group = New-MgGroup -DisplayName $groupName `
         -MailEnabled:$false `
-        -MailNickname "REPLACE_WITH_GROUP_ALIAS" `
+        -MailNickname "MMCF1Licensing" `
         -SecurityEnabled:$true `
         -GroupTypes @()
     Write-Host "Group '$groupName' created: $($group.Id)"
 } else {
-    Write-Host "`nGroup '$groupName' already exists: $($group.Id)"
+    Write-Host "Group '$groupName' already exists: $($group.Id)"
 }
 
-# Path to the input CSV file
-$csvPath = ".\users.csv"
-Write-Host "`nUsing CSV from path: $csvPath"
+# Load the CSV file containing user information
+$csvPath = "C:\Path\To\Your\CSV\users.csv"
+Write-Host "Using CSV from path: $csvPath"
 $users = Import-Csv $csvPath
 
-# Iterate through each user in the CSV
+# Loop through each user in the CSV and process them
 foreach ($user in $users) {
-    # Normalize name fields
+    # Extract user attributes from CSV
     $firstName = $user.'First Name'.Trim()
-    $lastName = $user.'Last Name'.Trim().Split(" ")[0]
-    $fullName = "$firstName $lastName"
-
-    # Construct userPrincipalName (replace with your domain)
-    $userPrincipalName = "$firstName.$lastName@yourdomain.com".ToLower()
-
-    Write-Host "`nProcessing $fullName <$userPrincipalName>..."
-
-    ### Handle Hire Date (format: MM/DD/YY) ###
-    $hireDateISO = $null
+    $rawLastName = $user.'Last Name'.Trim()
     $rawHireDate = $user.'Hire Date (MM/DD/YY)' -as [string]
+    $birthDate = $user.'Birth Date (MM/YY)' -as [string]
+    $division = $user.'Division'
+    $jobTitle = $user.'Job Title'
+
+    # Skip user if missing required attributes
+    if (-not $firstName -or -not $rawLastName) {
+        Write-Warning "Skipping row due to missing first or last name."
+        continue
+    }
+
+    # Build the user's full name and email address
+    $lastName = $rawLastName.Split(" ")[0]
+    $fullName = "$firstName $lastName"
+    $userPrincipalName = "$firstName.$lastName@domain.com".ToLower() # Replace domain as necessary
+
+    Write-Host "Processing $fullName <$userPrincipalName>..."
+
+    # Parse the hire date into ISO format if it's valid
+    $hireDateISO = $null
     if ($rawHireDate -and $rawHireDate -match '^\d{1,2}/\d{1,2}/\d{2}$') {
         try {
             $parsedHireDate = [datetime]::ParseExact($rawHireDate, 'MM/dd/yy', $null)
             $hireDateISO = $parsedHireDate.ToString("yyyy-MM-dd")
         } catch {
-            Write-Warning "Invalid hire date for $fullName: '$rawHireDate'"
+            Write-Warning "Invalid hire date for ${fullName}: '$rawHireDate'"
         }
     }
 
-    ### Handle Birth Date (format: MM/YY) ###
-    $birthDate = $user.'Birth Date (MM/YY)' -as [string]
-
-    # Custom directory extension attributes
-    $additionalProps = @{}
-    if ($hireDateISO) { $additionalProps.employeeHireDate = $hireDateISO }
-    if ($birthDate)    { $additionalProps.extensionAttribute3 = $birthDate }
-
-    if ($additionalProps.Count -eq 0) { $additionalProps = $null }
-
-    ### Password Configuration (placeholder only — replace with secure password handling) ###
-    $password = "REPLACE_WITH_SECURE_PASSWORD"
+    # Set default password and force password change at next sign-in
+    $password = "TemporaryPassword123!"  # Replace with a policy-compliant password if needed
     $passwordProfile = @{
         ForceChangePasswordNextSignIn = $true
         Password = $password
     }
 
-    ### Check if the user already exists ###
+    # Check if the user already exists in Azure AD
     $existingUser = Get-MgUser -UserId $userPrincipalName -ErrorAction SilentlyContinue
-
     if (-not $existingUser) {
         Write-Host "Creating new Azure AD user: $userPrincipalName..."
 
-        $newUserParams = @{
-            AccountEnabled    = $true
-            DisplayName       = $fullName
-            MailNickname      = "$firstName$lastName"
-            UserPrincipalName = $userPrincipalName
-            GivenName         = $firstName
-            Surname           = $lastName
-            PasswordProfile   = $passwordProfile
+        # Define the new user body
+        $newUserBody = @{
+            AccountEnabled        = $true
+            DisplayName           = $fullName
+            MailNickname          = "$firstName$lastName"
+            UserPrincipalName     = $userPrincipalName
+            GivenName             = $firstName
+            Surname               = $lastName
+            Department            = $division
+            JobTitle              = $jobTitle
+            PasswordProfile       = $passwordProfile
         }
 
-        if ($additionalProps) {
-            $newUserParams['AdditionalProperties'] = $additionalProps
+        # Include hire date and birth date as extension attributes if present
+        if ($hireDateISO -or $birthDate) {
+            $newUserBody.OnPremisesExtensionAttributes = @{}
+            if ($hireDateISO) { $newUserBody.OnPremisesExtensionAttributes.employeeHireDate = $hireDateISO }
+            if ($birthDate)   { $newUserBody.OnPremisesExtensionAttributes.extensionAttribute3 = $birthDate }
         }
 
         try {
-            $createdUser = New-MgUser @newUserParams
+            # Create the new user in Azure AD
+            $createdUser = New-MgUser -BodyParameter $newUserBody
             Write-Host "User created: $($createdUser.Id)"
+            $userId = $createdUser.Id
         } catch {
             Write-Warning "Failed to create user: $_"
             continue
         }
-
-        $userId = $createdUser.Id
     } else {
         Write-Host "User already exists: $userPrincipalName"
         $userId = $existingUser.Id
+
+        # Update user information if needed
+        $updateBody = @{
+            Department = $division
+            JobTitle   = $jobTitle
+        }
+
+        if ($hireDateISO -or $birthDate) {
+            $updateBody.OnPremisesExtensionAttributes = @{}
+            if ($hireDateISO) { $updateBody.OnPremisesExtensionAttributes.employeeHireDate = $hireDateISO }
+            if ($birthDate)   { $updateBody.OnPremisesExtensionAttributes.extensionAttribute3 = $birthDate }
+        }
+
+        try {
+            # Update user attributes in Azure AD
+            Update-MgUser -UserId $userId -BodyParameter $updateBody
+            Write-Host "Updated user info for $userPrincipalName"
+        } catch {
+            Write-Warning "Failed to update user: $_"
+        }
     }
 
-    ### Add the user to the group ###
+    # Add the user to the previously validated group
     if ($userId) {
         try {
             New-MgGroupMember -GroupId $group.Id -DirectoryObjectId $userId -ErrorAction Stop
             Write-Host "Added to group '$groupName'"
         } catch {
-            Write-Warning "Failed to add to group: $_"
+            if ($_ -match "added object references already exist") {
+                Write-Host "User already in group."
+            } else {
+                Write-Warning "Failed to add to group: $_"
+            }
         }
     } else {
         Write-Warning "User ID is missing, cannot add to group."
