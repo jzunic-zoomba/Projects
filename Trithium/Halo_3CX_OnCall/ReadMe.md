@@ -7,6 +7,6 @@ Note that these were designed for HaloPSA and 3CX specifcally but can work with 
 The 3CX file was taken from 3CX (with specifics removed) while the HaloPSA files were taken from the GitHub Actions associated to Trithium. Also with specifics removed. 
 
 ## HaloPSA
-HaloPSA a workflow was used to activate workflow actions to properly time it.
-Note that the computers default time zone is UCT so plan accordingly. 
+HaloPSA a yml file was used to activate workflow actions to properly time it.
+Note that the computers **default time zone is UCT** so plan accordingly. 
 
