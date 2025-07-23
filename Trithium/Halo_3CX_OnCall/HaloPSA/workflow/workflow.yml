@@ -32,6 +32,6 @@ jobs:
         # Checks out the repository content so the script can be accessed
 
       - name: Run PowerShell script
-        run: ./onCallUpdate.ps1
+        run: ./haloRotation.ps1
         shell: pwsh
         # Executes your PowerShell script located in the root directory
