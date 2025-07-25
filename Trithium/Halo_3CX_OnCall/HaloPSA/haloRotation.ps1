@@ -15,9 +15,9 @@ $Technician2Name = $env:EMP2              # Name of technician 2
 $Technician3Name = $env:EMP3              # Name of technician 3
 
 # Manually defined technician user IDs (should match your internal IDs in HaloPSA)
-$Technician1ID = 9
-$Technician2ID = 11
-$Technician3ID = 4
+$Technician1ID = "ID1"
+$Technician2ID = "ID2"
+$Technician3ID = "ID3"
 
 # Role ID for the target role being updated (from environment variable or hardcoded if needed)
 $RoleID = $env:ROLEID                     # Example: 16
