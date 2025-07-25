@@ -21,11 +21,11 @@ Write-Host "Formatted Birth Date: $formattedBirthDate"
 
 # User Type Mapping - Convert user type integer value to string for readability
 $userTypeMap = @{
-    0 = "End"
-    1 = "Office"
-    2 = "Field"
-    3 = "Email Only"
-    4 = "Laborer"
+    0 = "Type1"
+    1 = "Type2"
+    2 = "Type3"
+    3 = "Type4"
+    4 = "Type5"
 }
 
 # Check if the UserType is valid
@@ -38,11 +38,11 @@ if ($userTypeMap.ContainsKey($UserType)) {
 
 # VDI Option Mapping - Match option to a group name
 $vdiGroupMap = @{
-    1 = "General User"
-    2 = "Corporate Services (Adobe)"
-    3 = "Bluebeam"
-    4 = "Phoenix & Bluebeam"
-    5 = "Project Management"
+    1 = "VDI1"
+    2 = "VDI2"
+    3 = "VDI3"
+    4 = "VDI4"
+    5 = "VDI5"
 }
 
 # Validate VDI Option
@@ -66,14 +66,14 @@ Write-Host "Searching for VDI Group..." -ForegroundColor Yellow
 
 # VDI Script Mapping
 $scriptMap = @{
-    1 = "MMC_Gen_User.ps1"
-    2 = "MMC_Corporate_Services.ps1"
-    3 = "MMC_Bluebeam.ps1"
-    4 = "MMC_Phoe_Blue.ps1"
-    5 = "MMC_Project_Management.ps1"
+    1 = "Company_Gen_User.ps1"
+    2 = "Company_Corporate_Services.ps1"
+    3 = "Company_Bluebeam.ps1"
+    4 = "Company_Phoe_Blue.ps1"
+    5 = "Company_Project_Management.ps1"
 }
 
-$defaultScript = "MMC_General_Onboarding.ps1"
+$defaultScript = "Company_General_Onboarding.ps1"
 
 # Determine which script to execute
 $scriptName = $scriptMap[$VDIOption]
