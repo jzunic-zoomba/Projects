@@ -9,7 +9,7 @@ $artifactPath = "last_check.txt"
 $nowUtc = Get-Date
 $nowEst = $nowUtc.ToUniversalTime().AddHours(-5)
 $hour = $nowEst.Hour
-$isAfterHours = ($hour -ge 17 -or $hour -lt 8)
+$isAfterHours = ($hour -ge "StartTime" -or $hour -lt "End Time")
 
 # Exit if during business hours
 if (-not $isAfterHours) {
