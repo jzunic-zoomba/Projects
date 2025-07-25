@@ -4,4 +4,4 @@
  
 # **Disclosure**
 
-These are all of the finished projects that I have worked on while working at Trithium Solutions, if you want to see the unfinished/untested projects those will be in the Concpets folder
+These are all of the finished projects that I have worked on while working at Trithium Solutions, if you want to see the unfinished/untested projects those will be in the Concepts folder
